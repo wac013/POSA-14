@@ -1,6 +1,8 @@
-Week 4: Programming Assignment 3 Peer Assessment Description
+Week 5: Programming Assignment 4 Peer Assessment Description
 
-Due Monday, June 23rd, 2014
+Due Monday, June 30th, 2014
+
+Steps for Peer Assessors 
 
 You will be asked to evaluate five other student's projects as well as
 do a self assessment of your own project. If you do not assess the
@@ -21,21 +23,21 @@ did. That's fine.
 
 Next, get a copy of the grading driver files from 
 
-https://github.com/douglascraigschmidt/POSA-14/tree/master/grading-drivers/week-4-assignment-3
+https://github.com/douglascraigschmidt/POSA-14/tree/master/grading-drivers/week-5-assignment-4
 
-and copy the submitter's SimpleSemaphore.java and PingPongRight.java
-files into your IDE (which may have been given a random, odd name by
-Coursera, so you'll need to rename it) and store it in the
-src/edu/vuum/mocca/ directory.  I recommend scanning the submitted
-code to ensure there are no changes other than adding the appropriate
-code as indicated by the "TODO" comments. A quick way to check for
-this automatically is to run "diff" on the original files and the
-submitted files to make sure all the changes are as expected, in the
-expected places in the code. Then make sure everything compiles
-properly in your environment. Note that the grading drivers are in a
-different location than the original skeletons to ensure that all
-submissions are tested against the "master" regression tests and
-minimize the amount of code that comes from "the wild".
+and copy the submitter's AndroidPlatformStrategy.java file into your
+IDE (which may have been given a random, odd name by Coursera, so
+you'll need to rename it) and store it in the src/edu/vuum/mocca/
+directory.  I recommend scanning the submitted code to ensure there
+are no changes other than adding the appropriate code as indicated by
+the "TODO" comments. A quick way to check for this automatically is to
+run "diff" on the original files and the submitted files to make sure
+all the changes are as expected, in the expected places in the
+code. Then make sure everything compiles properly in your
+environment. Note that the grading drivers are in a different location
+than the original skeletons to ensure that all submissions are tested
+against the "master" regression tests and minimize the amount of code
+that comes from "the wild".
 
 Once you've reviewed the code against the rubric described below
 please try to run it, walking through the steps called out in the
@@ -46,9 +48,9 @@ Hours). I suggest you make a fresh Eclipse workspace when doing this,
 so that the submitter's code is isolated and easily distinguishable
 from yours. One way you can do that is to select File > Open Workspace
 > Browse > New Folder. This will lead to a new, empty Eclipse
-workspace. Then you can copy that submitter's SimpleSemaphore.java and
-PingPongRight.java files into this new workspace.  Also, it's
-recommended to run the submitted code a virtual machine sandbox to
+workspace. Then you can copy that submitter's
+AndroidPlatformStrategy.java file into this new workspace. Also, it's
+recommended to run the submitted code in the Android AVD emulator to
 further isolate it from causing harm.
 
 And again, remember that most everyone is working very hard and
