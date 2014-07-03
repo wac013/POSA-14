@@ -25,34 +25,29 @@ public class AcronymActivity extends Activity {
     static private String TAG = AcronymActivity.class.getCanonicalName();
 
     /**
-     * Reference to the Acronym Service (after it's bound).
-     */
-    AcronymRequest mAcronymRequest;
-
-    /**
      * The ListView that will display the results to the user.
      */
-    ListView mListView;
+     private ListView mListView;
 
     /**
      * A custom ArrayAdapter used to display the list of AcronymData objects.
      */
-    AcronymDataArrayAdapter adapter;
+    private AcronymDataArrayAdapter adapter;
     
     /**
      * Acronym entered by the usre.
      */
-    EditText mEditText;
+    private EditText mEditText;
 
     /**
-     * The implementation of the AcronymResults AIDL
-     * Interface. Should be passed to the WebService using the
+     * The implementation of the AcronymResults AIDL Interface.
+     * Should be passed to the WebService using the
      * AcronymRequest.expandAcronym() method.
      * 
      * This implementation of AcronymResults.Stub plays the role of
      * Invoker in the Broker Pattern.
      */
-    AcronymResults.Stub mAcronymResults = new AcronymResults.Stub() {
+    private AcronymResults.Stub mAcronymResults = new AcronymResults.Stub() {
             /**
              * This method is called back by the Service to return the
              * results.
@@ -73,39 +68,33 @@ public class AcronymActivity extends Activity {
 	};
 
     /**
-     * This ServiceConnection is used to receive results after binding
-     * to the AcronymServiceAsync Service using bindService().
+     * This GenericServiceConnection is used to receive results after
+     * binding to the AcronymServiceAsync Service using bindService().
      */
-    ServiceConnection mServiceConnectionAsync = new ServiceConnection() {
-            /**
-             * Cast the returned IBinder object to the AcronymRequest
-             * AIDL Interface and store it for later use in
-             * mAcronymRequest.
-             */
-            @Override
-		public void onServiceConnected(ComponentName name, IBinder service) {
-                Log.d(TAG, "onServiceConnected(), ComponentName: " + name);
-                mAcronymRequest = AcronymRequest.Stub.asInterface(service);
-            }
-
-            /**
-             * Called if the remote service crashes and is no longer
-             * available. The ServiceConnection will remain bound, but
-             * the service will not respond to any requests.
-             */
-            @Override
-		public void onServiceDisconnected(ComponentName name) {
-                mAcronymRequest = null;
-            }
-
-	};
+    private GenericServiceConnection<AcronymRequest> mServiceConnectionAsync =
+        new GenericServiceConnection<AcronymRequest>
+        (new GenericServiceConnection.InterfaceFactory<AcronymRequest>() {
+            public AcronymRequest asInterface(IBinder service) { 
+                return AcronymRequest.Stub.asInterface(service); 
+            }});
 
     /**
-     * Called when the activity is starting. This is where most initialization
-     * should go.
+     * This GenericServiceConnection is used to receive results after
+     * binding to the AcronymServiceSync Service using bindService().
+     */
+    private GenericServiceConnection<AcronymCall> mServiceConnectionSync =
+        new GenericServiceConnection<AcronymCall>
+        (new GenericServiceConnection.InterfaceFactory<AcronymCall>() {
+            public AcronymCall asInterface(IBinder service) { 
+                return AcronymCall.Stub.asInterface(service); 
+            }});
+
+    /**
+     * Called when the activity is starting - this is where most
+     * initialization should go.
      */
     @Override
-	protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         // Get references to the UI components.
@@ -116,25 +105,75 @@ public class AcronymActivity extends Activity {
     }
 
     /*
-     * Start the Asynchronous lookup.
+     * Initiate the asynchronous acronym lookup.
      */
-    public void expandAcronym(View v) {
-        if (mAcronymRequest != null) {
+    public void expandAcronymAsync(View v) {
+        AcronymRequest acronymRequest = 
+            mServiceConnectionAsync.getInterface();
+
+        if (acronymRequest != null) {
             // Get the acronym entered by the user.
-            String acronym = mEditText.getText().toString();
+            final String acronym = mEditText.getText().toString();
 
             hideKeyboard();
 
             try {
                 // Invoke a one-way AIDL call, which does not block
-                // the client.
-                mAcronymRequest.expandAcronym(mAcronymResults,
-                                              acronym);
+                // the client.  The results are returned via the
+                // sendResults() method of the mAcronymResults
+                // callback object, which runs in a Thread from the
+                // Thread pool managed by the Binder framework.
+                acronymRequest.expandAcronym(mAcronymResults,
+                                             acronym);
             } catch (RemoteException e) {
                 Log.e(TAG, "RemoteException:" + e.getMessage());
             }
         } else {
-            Log.d(TAG, "mAcronymRequest was null.");
+            Log.d(TAG, "acronymRequest was null.");
+        }
+    }
+
+    /*
+     * Initiate the synchronous acronym lookup.
+     */
+    public void expandAcronymSync(View v) {
+        final AcronymCall acronymCall = 
+            mServiceConnectionSync.getInterface();
+
+        if (acronymCall != null) {
+            // Get the acronym entered by the user.
+            final String acronym = mEditText.getText().toString();
+
+            hideKeyboard();
+
+            // Use mAcronymCall to download the Acronym data in a
+            // separate Thread and then display it in the UI Thread.
+            // We use a separate Thread to avoid blocking the UI
+            // Thread.
+            new Thread(new Runnable() {
+                    public void run () {
+                        try {
+                            Log.d(TAG,
+                                  "Calling twoway AcronymServiceSync.expandAcronym()");
+
+                            // Download the expanded acronym via a
+                            // synchronous two-way method call.
+                            final List<AcronymData> acronymDataList = 
+                                acronymCall.expandAcronym(acronym);
+
+                            // Display the results in the UI Thread.
+                            runOnUiThread(new Runnable() {
+                                    public void run() {
+                                        displayResults(acronymDataList);
+                                    }
+                                });
+                        } catch (RemoteException e1) {
+                            e1.printStackTrace();
+                        }
+                    }
+                }).start();
+        } else {
+            Log.d(TAG, "mAcronymCall was null.");
         }
     }
 
@@ -162,21 +201,25 @@ public class AcronymActivity extends Activity {
     }
 
     /**
-     * Hook method called when the MainActivity becomes visible to bind the
-     * Activity to the Services.
+     * Hook method called when the MainActivity becomes visible to
+     * bind the Activity to the Services.
      */
     @Override
     public void onStart() {
         super.onStart();
 
-        // Launch the designated Bound Service(s) if they aren't
-        // already running via a call to bindService(), which binds
-        // this activity to the Acronym* Services if they aren't
-        // already bound.
-        if (mAcronymRequest == null) {
+        // Launch the Bound Services if they aren't already running
+        // via a call to bindService(), which binds this activity to
+        // the Acronym* Services if they aren't already bound.
+        if (mServiceConnectionAsync.getInterface() == null) 
             bindService(AcronymServiceAsync.makeIntent(this),
-                        mServiceConnectionAsync, BIND_AUTO_CREATE);
-        }
+                        mServiceConnectionAsync,
+                        BIND_AUTO_CREATE);
+        
+        if (mServiceConnectionSync.getInterface() == null) 
+            bindService(AcronymServiceSync.makeIntent(this),
+                        mServiceConnectionSync,
+                        BIND_AUTO_CREATE);
     }
 
     /**
@@ -184,13 +227,16 @@ public class AcronymActivity extends Activity {
      * unbind the Activity from the Services.
      */
     @Override
-	public void onStop() {
+    public void onStop() {
         super.onStop();
 
         // Unbind the Async Service if it is connected.
-        if (mAcronymRequest != null) {
+        if (mServiceConnectionAsync.getInterface() != null)
             unbindService(mServiceConnectionAsync);
-        }
+
+        // Unbind the Sync Service if it is connected.
+        if (mServiceConnectionSync.getInterface() != null)
+            unbindService(mServiceConnectionSync);
     }
 
     /**
