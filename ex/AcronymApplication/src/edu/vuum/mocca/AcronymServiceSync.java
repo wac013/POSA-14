@@ -5,6 +5,7 @@ import java.util.List;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.net.http.AndroidHttpClient;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.util.Log;
@@ -35,6 +36,35 @@ public class AcronymServiceSync extends Service {
         AcronymServiceSync.class.getCanonicalName();
 
     /**
+     * Object that can invoke HTTP GET requests on URLs.
+     */
+    private final static AndroidHttpClient mClient =
+        AndroidHttpClient.newInstance("");
+
+    /**
+     * Called when a client (e.g., AcronymActivity) calls
+     * bindService() with the proper Intent.  Returns the
+     * implementation of AcronymCall, which is implicitly cast as an
+     * IBinder.
+     */
+    @Override
+    public IBinder onBind(Intent intent) {
+        return mAcronymCallImpl;
+    }
+
+    /**
+     * Factory method that makes an Intent used to start the
+     * AcronymServiceSync when passed to bindService().
+     * 
+     * @param context
+     *            The context of the calling component.
+     */
+    public static Intent makeIntent(Context context) {
+        return new Intent(context,
+                          AcronymServiceSync.class);
+    }
+
+    /**
      * The concrete implementation of the AIDL Interface AcronymCall,
      * which extends the Stub class that implements AcronymCall,
      * thereby allowing Android to handle calls across process
@@ -58,7 +88,8 @@ public class AcronymServiceSync extends Service {
                 // Call the Acronym Web service to get the list of
                 // possible expansions of the designated acronym.
                 List<AcronymData> acronymResults = 
-                    DownloadUtils.getResults(acronym);
+                    AcronymDownloadUtils.getResults(mClient,
+                                                    acronym);
 
                 Log.d(TAG, "" + acronymResults.size() + " results for acronym: " + acronym);
 
@@ -68,26 +99,8 @@ public class AcronymServiceSync extends Service {
             }
 	};
 
-    /**
-     * Called when a client (e.g., AcronymActivity) calls
-     * bindService() with the proper Intent.  Returns the
-     * implementation of AcronymCall, which is implicitly cast as an
-     * IBinder.
-     */
-    @Override
-    public IBinder onBind(Intent intent) {
-        return mAcronymCallImpl;
-    }
-
-    /**
-     * Factory method that makes an Intent used to start the
-     * AcronymServiceSync when passed to bindService().
-     * 
-     * @param context
-     *            The context of the calling component.
-     */
-    public static Intent makeIntent(Context context) {
-        return new Intent(context,
-                          AcronymServiceSync.class);
+    public void onDestroy() {
+        mClient.close();
+        super.onDestroy();
     }
 }
