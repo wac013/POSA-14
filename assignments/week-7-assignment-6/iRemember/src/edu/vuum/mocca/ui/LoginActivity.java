@@ -26,7 +26,10 @@ public class LoginActivity extends StoryActivityBase{
 	EditText mPassword;
 	
 	// Make sure we use maximum security to store login credentials
-	static final int MAX_SECURITY = Integer.MAX_VALUE;
+	// removed extra constant: 
+	//	1. this constant is assigned some arbitrary value that represents nothing
+	//	2. it's bad practice to recreate a flag when one exists already in StorageUtilities
+	//static final int MAX_SECURITY = Integer.MAX_VALUE;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -47,7 +50,11 @@ public class LoginActivity extends StoryActivityBase{
 	public static File getLoginFile (Context context) {
 		return StorageUtilities.getOutputMediaFile(context, 	// Line 48
 				StorageUtilities.MEDIA_TYPE_TEXT, 
-				MAX_SECURITY, 
+				// use existing constant in StorageUtilities so the method handles the storage scheme correctly.
+				// by moving even the plain text login file to private storage, read access by another app
+				// should be denied by privileges of the file system.
+				// this is the easiest way to remedy the issue without making changes to StorageUtilities.java
+				StorageUtilities.SECURITY_PRIVATE,
 				"login.txt");
 	}
 	
